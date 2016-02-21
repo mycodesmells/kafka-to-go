@@ -1,50 +1,24 @@
-package main
+package twitter
 
 import (
 	"fmt"
 	"net/http"
 
-	"github.com/mycodesmells/kafka-to-go/twitter/twitter"
-
 	"github.com/kurrik/oauth1a"
 	"github.com/kurrik/twittergo"
-	"time"
 )
 
-func main() {
-	var (
-		lastTweetID uint64
-		handle      = "mycodesmells"
-	)
-
-	client := connect()
-
-	for {
-		select {
-		case <-time.After(time.Second):
-			tl, err := getTweets(client, handle, lastTweetID)
-			if err != nil {
-				fmt.Printf("Failed to load Tweets from %s: %v", handle, err)
-			}
-
-			lastID := printTweets(tl)
-			if lastID != 0 {
-				lastTweetID = lastID
-			}
-		}
-	}
-
-}
-
-func connect() *twittergo.Client {
+// Connect initializes a connection via Twitter API.
+func Connect() *twittergo.Client {
 	config := &oauth1a.ClientConfig{
-		ConsumerKey:    twitter.Key,
-		ConsumerSecret: twitter.Secret,
+		ConsumerKey:    Key,
+		ConsumerSecret: Secret,
 	}
 	return twittergo.NewClient(config, nil)
 }
 
-func getTweets(client *twittergo.Client, handle string, lastTweetID uint64) (twittergo.Timeline, error) {
+// Tweets returns a timeline with fetched tweet list.
+func Tweets(client *twittergo.Client, handle string, lastTweetID uint64) (twittergo.Timeline, error) {
 	url := getURL(handle, lastTweetID)
 
 	req, err := http.NewRequest("GET", url, nil)
@@ -74,15 +48,10 @@ func getURL(handle string, lastTweetID uint64) string {
 	return fmt.Sprintf("%s&since_id=%d", baseURL, lastTweetID)
 }
 
-func printTweets(tl twittergo.Timeline) uint64 {
+// PrintTweets prints a list of tweets to the standard output.
+func PrintTweets(tl twittergo.Timeline) {
 	fmt.Printf("Tweets found: %d\n", len(tl))
 	for _, t := range tl {
 		fmt.Printf("#%d: %s\n", t.Id(), t.Text())
 	}
-
-	if len(tl) > 0 {
-		return tl[0].Id()
-	}
-
-	return 0
 }
