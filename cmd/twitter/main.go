@@ -4,8 +4,14 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/mycodesmells/kafka-to-go/kafka"
 	"github.com/mycodesmells/kafka-to-go/twitter"
 )
+
+type Tweet struct {
+	Time time.Time
+	Text string
+}
 
 func main() {
 	var (
@@ -14,6 +20,10 @@ func main() {
 	)
 
 	client := twitter.Connect()
+	producer, err := kafka.NewProducer("0.0.0.0:9092")
+	if err != nil {
+		panic(fmt.Sprintf("Failed to initialize Kafka producer: %v", err))
+	}
 
 	for {
 		select {
@@ -23,9 +33,16 @@ func main() {
 				fmt.Printf("Failed to load Tweets from %s: %v", handle, err)
 			}
 
-			twitter.PrintTweets(tl)
+			for _, t := range tl {
+				tweet := Tweet{Time: t.CreatedAt(), Text: t.Text()}
+				producer.SendMessage("example", tweet)
+			}
+
+			fmt.Printf("Found %d tweets\n", len(tl))
+
 			if len(tl) > 0 {
 				lastTweetID = tl[0].Id()
+				tl[0].CreatedAt()
 			}
 		}
 	}
